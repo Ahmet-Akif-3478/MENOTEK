@@ -11,7 +11,7 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # -------------------------
-# DATA HANDLING
+# DATA
 # -------------------------
 def load_data():
     if not os.path.exists(DATA_FILE):
@@ -30,8 +30,8 @@ def save_data(data):
 def home():
     return render_template_string("""
     <h1>MENOTEK</h1>
-    <p>Alzheimer Monitoring System</p>
-    <a href="/register">Register</a> | 
+    <p>Alzheimer Care System</p>
+    <a href="/register">Register</a> |
     <a href="/login">Login</a>
     """)
 
@@ -62,7 +62,7 @@ def register():
     <form method="POST">
         Email:<br><input name="email"><br><br>
         Password:<br><input name="password" type="password"><br><br>
-        
+
         Role:<br>
         <select name="role">
             <option value="patient">Patient</option>
@@ -84,10 +84,11 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        user = next((u for u in data["users"] if u["email"] == email and u["password"] == password), None)
+        user = next((u for u in data["users"]
+                     if u["email"] == email and u["password"] == password), None)
 
         if not user:
-            return "Invalid credentials"
+            return "Invalid login"
 
         if user["role"] == "patient":
             return redirect(f"/patient/{user['id']}")
@@ -115,13 +116,13 @@ def patient(user_id):
 
     audio_html = ""
     for a in audios:
-        audio_html += f"<p>{a['file']}</p>"
+        audio_html += f"<p>🎧 {a['file']}</p>"
 
     return f"""
     <h1>Patient Panel</h1>
     <p>Welcome {user['email']}</p>
 
-    <h3>Device</h3>
+    <h3>Device Status</h3>
     <p>Serial: MENOTEK-DEVICE-001</p>
 
     <h3>Audio Records</h3>
@@ -133,10 +134,20 @@ def patient(user_id):
 # -------------------------
 @app.route("/relative/<int:user_id>")
 def relative(user_id):
+    data = load_data()
+
+    audios = data["audios"][-5:]
+
+    audio_html = ""
+    for a in audios:
+        audio_html += f"<p>🎧 {a['file']}</p>"
+
     return f"""
     <h1>Relative Panel</h1>
     <p>User ID: {user_id}</p>
-    <p>Patient list and audio access will appear here.</p>
+
+    <h3>Latest Patient Audio</h3>
+    {audio_html if audio_html else "No audio yet"}
     """
 
 # -------------------------
@@ -158,12 +169,15 @@ def upload_audio():
         "file": filename
     })
 
-    # keep only last 5
+    # keep last 5 only
     data["audios"] = data["audios"][-5:]
 
     save_data(data)
 
-    return jsonify({"status": "uploaded"})
+    return jsonify({
+        "status": "ok",
+        "file": filename
+    })
 
 # -------------------------
 if __name__ == "__main__":
